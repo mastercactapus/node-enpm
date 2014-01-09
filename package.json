@@ -1,16 +1,15 @@
 {
-  "name": "node-versioning",
+  "name": "enpm",
   "version": "0.0.0",
-  "description": "",
+  "description": "A proof-of-concept for a new method of installing node packages.",
   "main": "install.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
     "enpm": "install.js"
   },
-  "author": "",
-  "license": "BSD-2-Clause",
+  "author": "Nathan Caza",
+  "license": "MIT",
   "dependencies": {
     "q": "~0.9.7",
     "semver": "~2.2.1",
