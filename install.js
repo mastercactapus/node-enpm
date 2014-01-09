@@ -12,10 +12,14 @@ var packageData = require("./lib/package-data");
 var DependencyMapper = require("./lib/dependency-mapper");
 var PackageInstaller = require("./lib/package-installer");
 
-var pkg = process.argv[2] || "";
+var pkg = process.argv[3] || "";
+if (process.argv[2] !== "install") {
+	console.error("only install is supported at this time");
+	process.exit(1);
+}
 var pkgSplit = pkg.split("@");
-var pkgName = pkgSplit[0];
-var pkgVers = pkgSplit[1] || "";
+var pkgName = pkgSplit[1];
+var pkgVers = pkgSplit[2] || "";
 
 var depMap = new DependencyMapper();
 
@@ -30,7 +34,6 @@ if (!pkgName) {
 } else {
 	deps[pkgName] = pkgVers;
 }
-
 
 depMap.addDependencies(deps)
 .then(function(){
