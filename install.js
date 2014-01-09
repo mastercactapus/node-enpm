@@ -44,7 +44,9 @@ depMap.addDependencies(deps)
 	_.each(deps, function(semver, name){
 		var latest = versions.latest(depMap.dependencies[name], semver);
 		var dest = path.resolve("node_modules/.packages", name, latest);
-		fs.symlinkSync(dest, path.join("node_modules",name), "dir");
+		var linkname = path.join("node_modules",name);
+		if (fs.existsSync(linkname)) fs.unlinkSync(linkname);
+		fs.symlinkSync(dest, linkname, "dir");
 	});
 })
 .then(function(){
