@@ -16,7 +16,9 @@ cli.main(function(args,options){
 	var command = args.shift();
 	if (!command) return cli.getUsage();
 	
-	enpm.setOptions(options);
+	enpm.setOptions(_.omit(options, function(opt, key){
+		return opt === null;
+	}));
 	enpm.setOptions({
 		logger: cli
 	});
@@ -43,9 +45,9 @@ cli.main(function(args,options){
 				pkgs = getPkgJsonDeps(jsonPath);
 			}
 			if (command === "install") {
-				enpm.install(dir, pkgs);
+				enpm.install(dir, pkgs).done();
 			} else if (command === "update") {
-				enpm.update(dir, pkgs);
+				enpm.update(dir, pkgs).done();
 			}
 		break;
 		default:
