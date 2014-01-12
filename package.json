@@ -2,11 +2,10 @@
   "name": "enpm",
   "version": "0.0.0",
   "description": "A proof-of-concept for a new method of installing node packages.",
-  "main": "install.js",
-  "scripts": {
-  },
+  "main": "lib/enpm.js",
+  "scripts": {},
   "bin": {
-    "enpm": "install.js"
+    "enpm": "bin/enpm.js"
   },
   "author": "Nathan Caza",
   "license": "MIT",
