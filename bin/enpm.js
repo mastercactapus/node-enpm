@@ -61,6 +61,34 @@ cli.main(function(args,options){
 				enpm.update(dir, pkgs).done();
 			}
 		break;
+		case "config":
+		var getset = args.shift();
+		if (getset === "get") {
+			var prop = args.shift().split(".");
+			var out = enpm.options[prop[0]];
+			if (prop.length>1) {
+				out = out ? out[prop[1]] : "";
+			}
+			console.log(out||"");
+		} else if (getset === "set") {
+			var obj = {};
+			var prop = args.shift().split(".");
+			var val = args.shift();
+			if (prop.length > 1) {
+				obj[prop[0]] = {};
+				obj[prop[0]][prop[1]] = val;
+			} else {
+				obj[prop[0]] = val;
+			}
+			enpm.updaterc(obj);
+		} else if (getset === "unset") {
+			enpm.unsetrc(args.shift());
+		} else {
+			cli.error("To use config: enpm config get|set|unset <keyname> <keyvalue>");
+			cli.getUsage();
+		}
+
+		break;
 		default:
 		cli.error("Unknown command: " + command);
 		cli.getUsage();
