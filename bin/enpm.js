@@ -6,6 +6,17 @@ var fs = require("fs");
 var path = require("path");
 var _ = require("lodash");
 
+require("https").globalAgent.maxSockets = 8;
+require("http").globalAgent.maxSockets = 8;
+
+var _utils = require("../lib/utils");
+
+//fix cli logging
+console.error = _utils.log;
+
+cli.spinner = _utils.spinner;
+cli.progress = _utils.progressBar;
+
 cli.version = require("../package").version;
 cli.parse({
 	"registry": ["r","Registry to search","url"],
