@@ -6,8 +6,8 @@ var fs = require("fs");
 var path = require("path");
 var _ = require("lodash");
 
-require("https").globalAgent.maxSockets = 8;
-require("http").globalAgent.maxSockets = 8;
+require("https").globalAgent.maxSockets = 64;
+require("http").globalAgent.maxSockets = 64;
 
 var _utils = require("../lib/utils");
 
