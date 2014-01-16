@@ -5,6 +5,8 @@ var enpm = require("../lib/enpm");
 var fs = require("fs");
 var path = require("path");
 var _ = require("lodash");
+var semver = require("semver");
+var Q = require("q");
 
 require("https").globalAgent.maxSockets = 64;
 require("http").globalAgent.maxSockets = 64;
@@ -20,7 +22,10 @@ cli.progress = _utils.progressBar;
 cli.version = require("../package").version;
 cli.parse({
 	"registry": ["r","Registry to search","url"],
-	"registry2": ["r2","Second registry to search", "url"]
+	"registry2": ["r2","Second registry to search", "url"],
+	"save": ["save", "Save listed packages to dependencies"],
+	"save-dev": ["save-dev", "Save listed packages to devDependencies"],
+	"save-peer": ["save-peer", "Save listed packages to peerDependencies"]
 });
 
 cli.main(function(args,options){
@@ -56,9 +61,9 @@ cli.main(function(args,options){
 				pkgs = getPkgJsonDeps(jsonPath);
 			}
 			if (command === "install") {
-				enpm.install(dir, pkgs).done();
+				enpm.install(dir, pkgs).then(Q.fbind(updateDeps, jsonPath, options));
 			} else if (command === "update") {
-				enpm.update(dir, pkgs).done();
+				enpm.update(dir, pkgs).then(Q.fbind(updateDeps, jsonPath, options));
 			}
 		break;
 		case "config":
@@ -94,6 +99,33 @@ cli.main(function(args,options){
 		cli.getUsage();
 	}
 });
+
+function updateDeps(jsonPath, options,packages) {
+	if (!jsonPath || !fs.existsSync(jsonPath)) return;
+
+	var json = fs.readFileSync(jsonPath);
+	json = JSON.parse(json);
+	if (options["save"]) {
+		_.each(packages, function(version, name){
+			if (!json.dependencies) json.dependencies = {};
+			json.dependencies[name] = "~" + version;
+		});
+	}
+	if (options["save-dev"]) {
+		_.each(packages, function(version, name){
+			if (!json.devDependencies) json.devDependencies = {};
+			json.devDependencies[name] = "~" + version;
+		});
+	}
+	if (options["save-peer"]) {
+		_.each(packages, function(version, name){
+			if (!json.peerDependencies) json.peerDependencies = {};
+			json.peerDependencies[name] = "~" + version;
+		});
+	}
+
+	fs.writeFileSync(jsonPath, JSON.stringify(json, null, "  "));
+}
 
 function findNodeModulesDir(dir) {
 	dir = dir || process.cwd();
