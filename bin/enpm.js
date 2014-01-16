@@ -61,9 +61,9 @@ cli.main(function(args,options){
 				pkgs = getPkgJsonDeps(jsonPath);
 			}
 			if (command === "install") {
-				enpm.install(dir, pkgs).then(Q.fbind(updateDeps, jsonPath, options));
+				enpm.install(dir, pkgs).then(Q.fbind(updateDeps, jsonPath, options)).done();
 			} else if (command === "update") {
-				enpm.update(dir, pkgs).then(Q.fbind(updateDeps, jsonPath, options));
+				enpm.update(dir, pkgs).then(Q.fbind(updateDeps, jsonPath, options)).done();
 			}
 		break;
 		case "config":
