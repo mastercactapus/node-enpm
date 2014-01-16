@@ -1,6 +1,6 @@
 {
   "name": "enpm",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A proof-of-concept for a new method of installing node packages.",
   "main": "lib/enpm.js",
   "scripts": {},
