@@ -7,14 +7,36 @@ var path = require("path");
 var _ = require("lodash");
 var semver = require("semver");
 var Q = require("q");
+var colors = require("colors");
 
 require("https").globalAgent.maxSockets = 64;
 require("http").globalAgent.maxSockets = 64;
 
 var _utils = require("../lib/utils");
 
-cli.spinner = _utils.spinner;
-cli.progress = _utils.progressBar;
+var color = {
+	"info": "cyan",
+	"ok": "green",
+	"error": "yellow",
+	"fatal": "red"
+};
+var logger = {
+	spinner: _utils.spinner,
+	progress: _utils.progressBar
+};
+_.each(color, function(color, name){
+	logger[name] = function(msg) {
+		_utils.logLine((name.toUpperCase())[color], msg);
+	};
+});
+logger.debug = function(msg) {
+	if (!cli.debug) {
+		logger.debug = function(){};
+		return;
+	}
+
+	_utils.logLine("DEBUG".grey, msg);
+}
 
 cli
 .version(require("../package").version)
@@ -22,19 +44,46 @@ cli
 .option("-r2, --registry2 [URL]", "Fallback registry to use", null)
 .option("--save", "Add package do dependencies in package.json", false)
 .option("--save-dev", "Add package do devDependencies in package.json", false)
-.option("--save-peer", "Add package do peerDependencies in package.json", false);
+.option("--save-peer", "Add package do peerDependencies in package.json", false)
+.option("--debug", "Enable debug output", false);
 
 
-cli.command("install [package] [package]")
+cli.command("install [package]...")
 .description("Install packages")
 .action(function(){
-
+	enpm.setOptions(_.omit(cli, function(opt, key){
+		return opt === null;
+	}));
+	enpm.setOptions({
+		logger: logger
+	});
+	setCwd();
+	var pkgs = {};
+	if (arguments.length > 0) {
+		pkgs = getPackagesFromArgs([].slice.call(arguments,0,-1));
+	} else {
+		pkgs = getPackageJsonDeps();
+	}
+	enpm.install("node_modules", pkgs).then(Q.fbind(updateDeps, cli)).done();
 });
 
-cli.command("update [package] [package]")
+cli.command("update [package]...")
 .description("Like install, but gets latest from the registry")
 .action(function(){
-
+	enpm.setOptions(_.omit(cli, function(opt, key){
+		return opt === null;
+	}));
+	enpm.setOptions({
+		logger: logger
+	});
+	setCwd();
+	var pkgs = {};
+	if (arguments.length > 0) {
+		pkgs = getPackagesFromArgs([].slice.call(arguments,0,-1));
+	} else {
+		pkgs = getPackageJsonDeps();
+	}
+	enpm.update("node_modules", pkgs).then(Q.fbind(updateDeps, cli)).done();
 });
 
 cli
@@ -67,91 +116,27 @@ cli
 	}
 });
 
-
-
-
-
-
 cli.parse(process.argv);
 
-process.exit(0);
 
 
-
-cli.main(function(args,options){
-	var command = args.shift();
-	if (!command) return cli.getUsage();
-	
-	enpm.setOptions(_.omit(options, function(opt, key){
-		return opt === null;
-	}));
-	enpm.setOptions({
-		logger: cli
-	});
-
-	//install/update -- no packages -> find package.json, and then node_modules
-	// otherwise find nearest node_modules and install there
-
-	switch (command) {
-		case "install": case "update":
-			var dir,pkgs,jsonPath;
-			jsonPath = getPkgJsonPath();
-			if (jsonPath) {
-				dir = path.join(path.dirname(jsonPath), "node_modules");
-			}
-			if (args.length) {
-				if (!dir) {
-					dir = findNodeModulesDir();
-				}
-				pkgs = parsePackages(args);
-			} else {
-				if (!jsonPath) {
-					cli.fatal("Could not find package.json in any directory from here to root");
-				}
-				pkgs = getPkgJsonDeps(jsonPath);
-			}
-			if (command === "install") {
-				enpm.install(dir, pkgs).then(Q.fbind(updateDeps, jsonPath, options)).done();
-			} else if (command === "update") {
-				enpm.update(dir, pkgs).then(Q.fbind(updateDeps, jsonPath, options)).done();
-			}
-		break;
-		case "config":
-		var getset = args.shift();
-		if (getset === "get") {
-			var prop = args.shift().split(".");
-			var out = enpm.options[prop[0]];
-			if (prop.length>1) {
-				out = out ? out[prop[1]] : "";
-			}
-			console.log(out||"");
-		} else if (getset === "set") {
-			var obj = {};
-			var prop = args.shift().split(".");
-			var val = args.shift();
-			if (prop.length > 1) {
-				obj[prop[0]] = {};
-				obj[prop[0]][prop[1]] = val;
-			} else {
-				obj[prop[0]] = val;
-			}
-			enpm.updaterc(obj);
-		} else if (getset === "unset") {
-			enpm.unsetrc(args.shift());
+function setCwd(dir, search) {
+	dir = dir || process.cwd();
+	search = search || "package.json";
+	if (fs.existsSync(path.join(dir,search))) {
+		process.chdir(dir);
+	} else {
+		var newDir = path.dirname(dir);
+		if (newDir !== dir) {
+			setCwd(newDir, search);
 		} else {
-			cli.error("To use config: enpm config get|set|unset <keyname> <keyvalue>");
-			cli.getUsage();
+			setCwd(null, "node_modules");
 		}
-
-		break;
-		default:
-		cli.error("Unknown command: " + command);
-		cli.getUsage();
 	}
-});
+}
 
-function updateDeps(jsonPath, options,packages) {
-	if (!jsonPath || !fs.existsSync(jsonPath)) return;
+function updateDeps(options, packages) {
+	if (!fs.existsSync("package.json")) return;
 
 	var json = fs.readFileSync(jsonPath);
 	json = JSON.parse(json);
@@ -177,46 +162,17 @@ function updateDeps(jsonPath, options,packages) {
 	fs.writeFileSync(jsonPath, JSON.stringify(json, null, "  "));
 }
 
-function findNodeModulesDir(dir) {
-	dir = dir || process.cwd();
-	var modulesDir = path.join(dir, "node_modules");
-	if (fs.existsSync(modulesDir)) {
-		return modulesDir;
-	} else {
-		var newDir = path.dirname(dir);
-		if (newDir === dir) {
-			return path.join(process.cwd(), "node_modules");
-		} else {
-			return findNodeModulesDir(newDir);
-		}
-	}
-}
-
-function getPkgJsonPath(dir) {
-	dir = dir || process.cwd();
-	var pkgJsonPath = path.join(dir,"package.json");
-	if (fs.existsSync(pkgJsonPath)) {
-		return pkgJsonPath;
-	} else {
-		var newDir = path.dirname(dir);
-		if (newDir === dir) {
-			return null;
-		} else {
-			return getPkgJsonPath(newDir);
-		}
-	}
-}
-function getPkgJsonDeps(pkgJsonPath) {
-	var json = require(pkgJsonPath);
+function getPackageJsonDeps() {
+	var json = JSON.parse(fs.readFileSync("packages.json"));
 	return _.extend({},
 		json.dependencies||{},
 		json.devDependencies||{},
 		json.peerDependencies||{});
 }
 
-function parsePackages(packageList) {
+function getPackagesFromArgs(argList) {
 	var packageMap = {};
-	packageList.forEach(function(pkg){
+	[].forEach.call(argList, function(pkg){
 		var split = pkg.split("@");
 		packageMap[split[0]] = split[1] || "*";
 	});
