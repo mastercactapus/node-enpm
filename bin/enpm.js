@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var cli = require("cli").enable("status", "version");
+var cli = require("commander");
 var enpm = require("../lib/enpm");
 var fs = require("fs");
 var path = require("path");
@@ -13,20 +13,70 @@ require("http").globalAgent.maxSockets = 64;
 
 var _utils = require("../lib/utils");
 
-//fix cli logging
-console.error = _utils.log;
-
 cli.spinner = _utils.spinner;
 cli.progress = _utils.progressBar;
 
-cli.version = require("../package").version;
-cli.parse({
-	"registry": ["r","Registry to search","url"],
-	"registry2": ["r2","Second registry to search", "url"],
-	"save": ["save", "Save listed packages to dependencies"],
-	"save-dev": ["save-dev", "Save listed packages to devDependencies"],
-	"save-peer": ["save-peer", "Save listed packages to peerDependencies"]
+cli
+.version(require("../package").version)
+.option("-r, --registry [URL]", "Default registry to use", "https://registry.npmjs.org/")
+.option("-r2, --registry2 [URL]", "Fallback registry to use", null)
+.option("--save", "Add package do dependencies in package.json", false)
+.option("--save-dev", "Add package do devDependencies in package.json", false)
+.option("--save-peer", "Add package do peerDependencies in package.json", false);
+
+
+cli.command("install [package] [package]")
+.description("Install packages")
+.action(function(){
+
 });
+
+cli.command("update [package] [package]")
+.description("Like install, but gets latest from the registry")
+.action(function(){
+
+});
+
+cli
+.command("config <set|get> <option> [value]")
+.description("Set or get configuration")
+.action(function(action, optionName, optionValue){
+	if (action === "get") {
+		var prop = optionName.split(".");
+		var out = enpm.options[prop[0]];
+		if (prop.length>1) {
+			out = out ? out[prop[1]] : "";
+		}
+		console.log(out||"");
+	} else if (action === "set") {
+		var obj = {};
+		var prop = optionName.split(".");
+		var val = optionValue;
+		if (prop.length > 1) {
+			obj[prop[0]] = {};
+			obj[prop[0]][prop[1]] = val;
+		} else {
+			obj[prop[0]] = val;
+		}
+		enpm.updaterc(obj);
+	} else if (action === "unset") {
+		enpm.unsetrc(optionName);
+	} else {
+		cli.error("To use config: enpm config get|set|unset <keyname> <keyvalue>");
+		cli.getUsage();
+	}
+});
+
+
+
+
+
+
+cli.parse(process.argv);
+
+process.exit(0);
+
+
 
 cli.main(function(args,options){
 	var command = args.shift();
