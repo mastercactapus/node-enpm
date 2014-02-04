@@ -45,18 +45,14 @@ cli
 .option("--save", "Add package do dependencies in package.json", false)
 .option("--save-dev", "Add package do devDependencies in package.json", false)
 .option("--save-peer", "Add package do peerDependencies in package.json", false)
+.option("--download-only", "Do not link packages or dependencies, only download/extract", false)
 .option("--debug", "Enable debug output", false);
 
 
 cli.command("install [package]...")
 .description("Install packages")
 .action(function(){
-	enpm.setOptions(_.omit(cli, function(opt, key){
-		return opt === null;
-	}));
-	enpm.setOptions({
-		logger: logger
-	});
+	setOptions();
 	setCwd();
 	var pkgs = {};
 	if (arguments.length > 0) {
@@ -70,12 +66,7 @@ cli.command("install [package]...")
 cli.command("update [package]...")
 .description("Like install, but gets latest from the registry")
 .action(function(){
-	enpm.setOptions(_.omit(cli, function(opt, key){
-		return opt === null;
-	}));
-	enpm.setOptions({
-		logger: logger
-	});
+	setOptions();
 	setCwd();
 	var pkgs = {};
 	if (arguments.length > 0) {
@@ -118,7 +109,19 @@ cli
 
 cli.parse(process.argv);
 
-
+function setOptions(){
+	enpm.setOptions(_.omit(cli, function(opt, key){
+		return opt === null;
+	}));
+	enpm.setOptions({
+		logger: logger
+	});
+	if (cli.downloadOnly) {
+		enpm.setOptions({
+			link: false
+		});
+	}
+}
 
 function setCwd(dir, search) {
 	dir = dir || process.cwd();
@@ -138,7 +141,7 @@ function setCwd(dir, search) {
 function updateDeps(options, packages) {
 	if (!fs.existsSync("package.json")) return;
 
-	var json = fs.readFileSync(jsonPath);
+	var json = fs.readFileSync("package.json");
 	json = JSON.parse(json);
 	if (options["save"]) {
 		_.each(packages, function(version, name){
@@ -159,7 +162,7 @@ function updateDeps(options, packages) {
 		});
 	}
 
-	fs.writeFileSync(jsonPath, JSON.stringify(json, null, "  "));
+	fs.writeFileSync("package.json", JSON.stringify(json, null, "  "));
 }
 
 function getPackageJsonDeps() {
