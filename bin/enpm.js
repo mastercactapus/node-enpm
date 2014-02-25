@@ -192,7 +192,7 @@ function updateDeps(options, packages) {
 }
 
 function getPackageJsonDeps() {
-	var json = JSON.parse(fs.readFileSync("packages.json"));
+	var json = JSON.parse(fs.readFileSync("package.json"));
 	return _.extend({},
 		json.dependencies||{},
 		json.devDependencies||{},
