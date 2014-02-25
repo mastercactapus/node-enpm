@@ -8,6 +8,7 @@ var _ = require("lodash");
 var semver = require("semver");
 var Q = require("q");
 var colors = require("colors");
+var cp = require("child_process");
 
 require("https").globalAgent.maxSockets = 64;
 require("http").globalAgent.maxSockets = 64;
@@ -49,32 +50,43 @@ cli
 .option("--debug", "Enable debug output", false);
 
 
-cli.command("install [package]...")
+cli.command("install")
 .description("Install packages")
 .action(function(){
 	setOptions();
 	setCwd();
 	var pkgs = {};
-	if (arguments.length > 0) {
+	if (arguments.length > 1) {
 		pkgs = getPackagesFromArgs([].slice.call(arguments,0,-1));
+	} else if (fs.existsSync("npm-shrinkwrap.json")) {
+		doShrinkwrap()
+		.then(triggerRebuild)
+		.done();
+		return;
 	} else {
 		pkgs = getPackageJsonDeps();
 	}
-	enpm.install("node_modules", pkgs).then(Q.fbind(updateDeps, cli)).done();
+	enpm.install("node_modules", pkgs)
+	.then(Q.fbind(updateDeps, cli))
+	.then(triggerRebuild)
+	.done();
 });
 
-cli.command("update [package]...")
+cli.command("update")
 .description("Like install, but gets latest from the registry")
 .action(function(){
 	setOptions();
 	setCwd();
 	var pkgs = {};
-	if (arguments.length > 0) {
+	if (arguments.length > 1) {
 		pkgs = getPackagesFromArgs([].slice.call(arguments,0,-1));
 	} else {
 		pkgs = getPackageJsonDeps();
 	}
-	enpm.update("node_modules", pkgs).then(Q.fbind(updateDeps, cli)).done();
+	enpm.update("node_modules", pkgs)
+	.then(Q.fbind(updateDeps, cli))
+	.then(triggerRebuild)
+	.done();
 });
 
 cli
@@ -106,8 +118,22 @@ cli
 		cli.getUsage();
 	}
 });
-
 cli.parse(process.argv);
+
+function doShrinkwrap() {
+	var json = JSON.parse(fs.readFileSync("npm-shrinkwrap.json"));
+	logger.info("installing via 'npm-shrinkwrap.json'");
+	return enpm.installShrinkwrap("node_modules", json);
+}
+
+function triggerRebuild() {
+    var proc = cp.spawn("npm", ["rebuild"], {
+        stdio: "inherit"
+    });
+    proc.on("close", function(code) {
+        process.exit(code);
+    });
+}
 
 function setOptions(){
 	enpm.setOptions(_.omit(cli, function(opt, key){
