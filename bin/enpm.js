@@ -6,7 +6,6 @@ var fs = require("fs");
 var path = require("path");
 var _ = require("lodash");
 var semver = require("semver");
-var Q = require("q");
 var colors = require("colors");
 var cp = require("child_process");
 
@@ -67,7 +66,9 @@ cli.command("install")
 		pkgs = getPackageJsonDeps();
 	}
 	enpm.install("node_modules", pkgs)
-	.then(Q.fbind(updateDeps, cli))
+	.then(function(pkgs){
+		return updateDeps(cli, pkgs);
+	})
 	.then(triggerRebuild)
 	.done();
 });
@@ -84,7 +85,9 @@ cli.command("update")
 		pkgs = getPackageJsonDeps();
 	}
 	enpm.update("node_modules", pkgs)
-	.then(Q.fbind(updateDeps, cli))
+	.then(function(pkgs){
+		return updateDeps(cli, pkgs);
+	})
 	.then(triggerRebuild)
 	.done();
 });

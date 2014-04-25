@@ -13,14 +13,14 @@
   "author": "Nathan Caza",
   "license": "MIT",
   "dependencies": {
-    "q": "~0.9.7",
-    "semver": "~2.2.1",
-    "lodash": "~2.4.0",
-    "request": "~2.27.0",
-    "mkdirp": "~0.3.5",
-    "tar": "~0.1.19",
-    "glob": "~3.2.8",
-    "commander": "~2.1.0",
-    "colors": "~0.6.2"
+    "semver": "^2.2.1",
+    "lodash": "^2.4.1",
+    "request": "^2.34.0",
+    "mkdirp": "^0.4.0",
+    "tar": "^0.1.19",
+    "glob": "^3.2.9",
+    "commander": "^2.2.0",
+    "colors": "^0.6.2",
+    "bluebird": "^1.2.3"
   }
 }
